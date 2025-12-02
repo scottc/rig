@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>App</title>
+    </head>
+    <body>
+        <!-- Handle web sockets... -->
+        <h1>App</h1>
+        <div id="chat-container"></div>
+        <input
+            id="prompt-input"
+            type="text"
+            placeholder="Type your message..."
+        />
+        <button id="send-button">Send</button>
+        <div id="app">Wasm uninitialized...</div>
+        <script type="module">
+            let wasmInstance = null;
+            let state = null;
+
+            var app = document.getElementById("app");
+            var chatContainer = document.getElementById("chat-container");
+            var promptInput = document.getElementById("prompt-input");
+            var sendButton = document.getElementById("send-button");
+
+            /**
+             * @param file {string}
+             */
+            const initWasm = async (file) => {
+                const lazyFile = fetch(file);
+                const inputs = {};
+                const opts = {};
+
+                const r = WebAssembly.instantiateStreaming
+                    ? await WebAssembly.instantiateStreaming(
+                          lazyFile,
+                          inputs,
+                          opts,
+                      )
+                    : WebAssembly.instantiate(
+                          await lazyFile.then((m) => m.arrayBuffer()),
+                          inputs,
+                          opts,
+                      );
+
+                const instance = r.instance;
+
+                wasmInstance = instance;
+
+                // Preserve state across reloads
+                if (state) {
+                    // instance.exports.restoreState(state);
+                }
+
+                // Run main
+                //instance.exports.main();
+
+                // Save state before next reload
+                // state = instance.exports.getState();
+
+                const c = r.instance.exports.add(24, 24);
+                console.log(c);
+
+                app.textContent = `${app.textContent} Wasm Initialized! Result: ${c}`;
+
+                return c;
+            };
+
+            await initWasm("./main.wasm");
+
+            function addMessage(message) {
+                var msg = document.createElement("div");
+                msg.textContent = message;
+                chatContainer.appendChild(msg);
+            }
+
+            function onSend() {
+                let prompt = promptInput.value;
+                promptInput.value = "";
+                addMessage("Sent: " + prompt);
+                ws.send(prompt);
+                promptInput.focus();
+            }
+
+            function init() {
+                sendButton.onclick = onSend;
+                promptInput.addEventListener("keypress", function (event) {
+                    if (event.key === "Enter") {
+                        event.preventDefault();
+                        sendButton.click();
+                    }
+                });
+                promptInput.focus();
+            }
+
+            init();
+
+            var ws = new WebSocket("ws://localhost:3010/chat");
+            ws.onmessage = function (e) {
+                addMessage(e.data);
+
+                try {
+                    const d = JSON.parse(e.data); // TODO: decode value, don't just simply JSON.parse it...
+
+                    if (d.type === "hot_reload") {
+                        console.log("f", d.files); // ["/main.wasm"]
+                        const res = initWasm(d.files[0] ?? "/main.wasm").then(
+                            (x) => console.log("x", x),
+                        );
+                        // TODO: reinitalize wasm... and persist wasm state...?
+                    }
+                } catch (err) {
+                    console.log("Error:", err);
+                }
+
+                return false;
+            };
+
+            ws.onclose = function (e) {
+                addMessage("Disconnected");
+            };
+
+            ws.onopen = function (e) {
+                addMessage("Connected");
+            };
+        </script>
+    </body>
+</html>
