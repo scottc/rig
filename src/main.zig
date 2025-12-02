@@ -29,10 +29,8 @@ pub fn main() !void {
     // defer std.heap.page_allocator.free(rocVersion.stderr);
 
     if (args.len >= 2) {
-        if (std.mem.eql(u8, args[1], "init") and std.mem.eql(u8, args[2], "default")) {
+        if (std.mem.eql(u8, args[1], "init")) {
             return init.cmdInitDefault(allocator); //, args[2..]);
-        } else if (std.mem.eql(u8, args[1], "init") and std.mem.eql(u8, args[2], "luke")) {
-            return init.cmdInitLuke(allocator); //, args[2..]);
         } else if (std.mem.eql(u8, args[1], "nuke")) {
             return init.cmdNuke(allocator);
         } else if (std.mem.eql(u8, args[1], "version")) {
@@ -41,8 +39,6 @@ pub fn main() !void {
             return version.cmdVersions(allocator); //, args[2..]);
         } else if (std.mem.eql(u8, args[1], "dev")) {
             return try dev.cmdDev(allocator);
-        } else if (std.mem.eql(u8, args[1], "old")) {
-            return dev.cmdOld(allocator);
         } else if (std.mem.eql(u8, args[1], "help")) {
             return help.cmdHelp(allocator);
         } else {

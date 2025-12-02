@@ -74,15 +74,13 @@ info:
 Now run:
   cd my-roc-app
   rig dev
-
 info: Running rig dev
-info: ./my-roc-app: roc app.roc
-error: Child process /home/anon/.cache/roc/3eca598d53a2d7ebebe25a544abe4d79/temp/roc-tmp-WrNCXNTMDaI7x6IUsGyXGzMJ9ngbAJ9n/roc_run_1662736024 killed by signal: 11
-error: Child process crashed with segmentation fault (SIGSEGV)
-error: Platform exited with code 139
+info: ./my-roc-app: roc main.roc
+Server Started
+Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...
 ```
 
-As you can see, `rig` is still very much a work in progress... and is not ready for use in development.
+A work in progress...
 
 ## Contributing
 
