@@ -68,18 +68,18 @@ pub fn build(b: *std.Build) void {
     // const builtins_module = roc_dep.module("builtins");
     // _ = builtins_module;
 
-    const zap = b.dependency("zap", .{
-        .target = target,
-        .optimize = optimize,
-        .openssl = false, // set to true to enable TLS support
-    });
-    exe.root_module.addImport("zap", zap.module("zap"));
+    // const zap = b.dependency("zap", .{
+    //     .target = target,
+    //     .optimize = optimize,
+    //     .openssl = false, // set to true to enable TLS support
+    // });
+    // exe.root_module.addImport("zap", zap.module("zap"));
 
-    const fzwatch_dep = b.dependency("fzwatch", .{
-        .target = target,
-        .optimize = optimize,
-    });
-    exe.root_module.addImport("fzwatch", fzwatch_dep.module("fzwatch"));
+    // const fzwatch_dep = b.dependency("fzwatch", .{
+    //     .target = target,
+    //     .optimize = optimize,
+    // });
+    // exe.root_module.addImport("fzwatch", fzwatch_dep.module("fzwatch"));
 
     // This declares intent for the executable to be installed into the
     // install prefix when running `zig build` (i.e. when executing the default

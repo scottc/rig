@@ -2,7 +2,7 @@
 const std = @import("std");
 const builtins = @import("builtins");
 
-// const dev_server = @import("dev_server.zig");
+const dev_server = @import("dev_server.zig");
 
 /// Host environment
 const HostEnv = struct {
@@ -242,23 +242,6 @@ fn hostedStdoutLine(ops: *builtins.host_abi.RocOps, ret_ptr: *anyopaque, args_pt
     stdout.writeAll("\n") catch {};
 }
 
-// var server: ?dev_server.DevServer = null;
-
-// pub fn startDevServer(allocator: std.mem.Allocator, port: u16) !u16 {
-//     var s = try dev_server.DevServer.init(allocator, port);
-//     try s.route("/", indexHandler);
-//     // try s.route("/files/{path...}", fileHandler);
-
-//     const actual_port = s.getPort();
-//     _ = try std.Thread.spawn(.{}, dev_server.DevServer.listenAndServe, .{&s});
-//     server = s;
-//     return actual_port;
-// }
-
-// fn indexHandler(_: dev_server.Request, res: *dev_server.Response) !void {
-//     try res.sendHtml("<h1>Hello from Roc dev server!</h1>");
-// }
-
 /// Hosted function: ZServer.serve! (index 3 - sorted alphabetically)
 /// Follows RocCall ABI: (ops, ret_ptr, args_ptr)
 /// Returns {} and takes () as argument
@@ -269,16 +252,11 @@ fn hostedZServerServe(ops: *builtins.host_abi.RocOps, ret_ptr: *anyopaque, args_
 
     const stdout: std.fs.File = .stdout();
     stdout.writeAll("Server Started\n") catch {};
-    while (true) {
-        stdout.writeAll("Zzz...") catch {};
-        std.Thread.sleep(100 * std.time.ns_per_ms);
-    }
 
-    // from scratch...
-    // try startDevServer(std.heap.page_allocator, 3010);
+    _ = dev_server.startDevServer(std.heap.page_allocator, 3010) catch {};
 
-    // zap lib
-    // server.cmdOld(std.heap.page_allocator);
+    const stderr: std.fs.File = .stderr();
+    stderr.writeAll("Oh No, an error occured, we're not expecting to be here, but yet... here we are...\n") catch {};
 }
 
 /// Array of hosted function pointers, sorted alphabetically by fully-qualified name

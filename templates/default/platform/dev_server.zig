@@ -1,5 +1,27 @@
 const std = @import("std");
 
+pub fn startDevServer(allocator: std.mem.Allocator, port: u16) !u16 {
+    const stdout: std.fs.File = .stdout();
+    stdout.writeAll("startDevServer...\n") catch {};
+
+    var s = try DevServer.init(allocator, port);
+    try s.route("/", indexHandler);
+    // try s.route("/files/{path...}", fileHandler);
+
+    const actual_port = s.getPort();
+
+    stdout.writeAll("listenAndServe...\n") catch {};
+    // spawning thread here seems to cause panic & segfault...
+    //_ = try std.Thread.spawn(.{}, DevServer.listenAndServe, .{&s});
+    DevServer.listenAndServe(&s) catch {};
+
+    return actual_port;
+}
+
+fn indexHandler(_: Request, res: *Response) !void {
+    try res.sendHtml("<h1>Hello from Roc dev server!</h1>");
+}
+
 pub const DevServer = struct {
     allocator: std.mem.Allocator,
     listener: std.net.Server,
@@ -15,6 +37,9 @@ pub const DevServer = struct {
     pub const Handler = *const fn (req: Request, res: *Response) anyerror!void;
 
     pub fn init(allocator: std.mem.Allocator, port: u16) !DevServer {
+        const stdout: std.fs.File = .stdout();
+        stdout.writeAll("init...\n") catch {};
+
         const address = try std.net.Address.parseIp("127.0.0.1", port);
         return .{
             .allocator = allocator,
@@ -29,39 +54,52 @@ pub const DevServer = struct {
     }
 
     pub fn getPort(self: *const DevServer) u16 {
+        const stdout: std.fs.File = .stdout();
+        stdout.writeAll("getPort...\n") catch {};
+
         return self.listener.listen_address.getPort();
     }
 
     pub fn route(self: *DevServer, pattern: []const u8, handler: Handler) !void {
-        var param_names = std.ArrayList([]const u8).init(self.allocator);
-        defer param_names.deinit();
+        const stdout: std.fs.File = .stdout();
+        stdout.writeAll("route...\n") catch {};
+
+        var param_names = std.ArrayListUnmanaged([]const u8){};
+        defer param_names.deinit(self.allocator); // Pass allocator here
 
         var it = std.mem.splitScalar(u8, pattern, '/');
         while (it.next()) |part| {
-            if (std.mem.startsWith(u8, part, "{") and std.mem.endsWith(u8, part, "}")) {
-                try param_names.append(part[1 .. part.len - 1]);
+            // Safer check: ensure part is long enough for "{...}"
+            if (part.len >= 3 and std.mem.startsWith(u8, part, "{") and std.mem.endsWith(u8, part, "}")) {
+                try param_names.append(self.allocator, part[1 .. part.len - 1]);
             }
         }
 
         try self.routes.put(pattern, .{
             .pattern = pattern,
             .handler = handler,
-            .param_names = try param_names.toOwnedSlice(),
+            .param_names = try param_names.toOwnedSlice(self.allocator),
         });
     }
 
     pub fn listenAndServe(self: *DevServer) !void {
+        const stdout: std.fs.File = .stdout();
+        stdout.writeAll("listenAndServe...\n") catch {};
+
         std.log.info("Roc dev server → http://localhost:{d}", .{self.getPort()});
 
+        stdout.writeAll("while not shutdown...\n") catch {};
         while (!self.shutdown.load(.monotonic)) {
+            stdout.writeAll("listener accept...\n") catch {};
             const conn = self.listener.accept() catch |err| switch (err) {
-                error.ConnectionAborted, error.ConnectionReset => continue,
+                // error.ConnectionAborted, error.ConnectionReset => continue,
                 else => return err,
             };
             const conn_copy = conn;
 
-            // Fire-and-forget thread per connection (dev server, not production)
-            _ = try std.Thread.spawn(.{}, handleConnection, .{ self, conn_copy });
+            // spawning thread here seems to cause panic & segfault...
+            // _ = try std.Thread.spawn(.{}, handleConnection, .{ self, conn_copy });
+            handleConnection(self, conn_copy);
         }
     }
 
@@ -70,6 +108,9 @@ pub const DevServer = struct {
     }
 
     fn handleConnection(server: *DevServer, conn: std.net.Server.Connection) void {
+        const stdout: std.fs.File = .stdout();
+        stdout.writeAll("handleConnection...\n") catch {};
+
         defer conn.stream.close();
 
         var arena = std.heap.ArenaAllocator.init(server.allocator);
@@ -81,7 +122,7 @@ pub const DevServer = struct {
         if (n == 0) return;
 
         var parser = RequestParser{ .raw = buffer[0..n] };
-        const req = parser.parse(alloc) catch |err| {
+        var req = parser.parse(alloc) catch |err| {
             std.log.warn("Failed to parse request: {}", .{err});
             return;
         };
@@ -101,8 +142,8 @@ pub const DevServer = struct {
             return;
         }
 
-        // Then try pattern matching
-        for (server.routes.values()) |r| {
+        var route_it = server.routes.valueIterator();
+        while (route_it.next()) |r| {
             if (matchRoute(r.pattern, req.path)) |params| {
                 req.params = params;
                 r.handler(req, &res) catch |err| res.serverError(err);
@@ -117,7 +158,7 @@ pub const DevServer = struct {
         var pattern_parts = std.mem.splitScalar(u8, pattern, '/');
         var path_parts = std.mem.splitScalar(u8, path, '/');
 
-        var params = std.StringHashMap([]const u8).init(std.heap.page_allocator catch return null);
+        var params = std.StringHashMap([]const u8).init(std.heap.page_allocator);
         errdefer params.deinit();
 
         while (true) {
@@ -232,9 +273,11 @@ pub const Response = struct {
         if (self.wrote_headers) return;
         self.wrote_headers = true;
 
-        var writer = self.conn.stream.writer();
-        try writer.print("HTTP/1.1 {d} {s}\r\n", .{ self.status_code, statusText(self.status_code) });
+        var header_buffer: [4096]u8 = undefined;
+        var writer_wrapper = self.conn.stream.writer(&header_buffer);
+        const writer: *std.Io.Writer = &writer_wrapper.interface;
 
+        try writer.print("HTTP/1.1 {d} {s}\r\n", .{ self.status_code, statusText(self.status_code) });
         try writer.writeAll("Connection: keep-alive\r\n");
         try writer.print("Content-Length: {d}\r\n", .{body_len});
 
@@ -244,6 +287,9 @@ pub const Response = struct {
         }
 
         try writer.writeAll("\r\n");
+
+        // As.. Andrew Kelly says, don't forget to flush...
+        try writer.flush();
     }
 };
 

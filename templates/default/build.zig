@@ -18,8 +18,10 @@ const RocTarget = enum {
     // arm32 targets
     arm32musl,
 
+    // this is a web server platform, while in theory we could support WASM via WASI...
+    // let's just disable wasm for now.
     // WebAssembly
-    wasm32,
+    // wasm32,
 
     fn toZigTarget(self: RocTarget) std.Target.Query {
         return switch (self) {
@@ -32,7 +34,9 @@ const RocTarget = enum {
             .arm64musl => .{ .cpu_arch = .aarch64, .os_tag = .linux, .abi = .musl },
             .arm64glibc => .{ .cpu_arch = .aarch64, .os_tag = .linux, .abi = .gnu },
             .arm32musl => .{ .cpu_arch = .arm, .os_tag = .linux, .abi = .musleabihf },
-            .wasm32 => .{ .cpu_arch = .wasm32, .os_tag = .wasi },
+            // this is a web server platform, while in theory we could support WASM via WASI...
+            // let's just disable wasm for now.
+            // .wasm32 => .{ .cpu_arch = .wasm32, .os_tag = .wasi },
         };
     }
 
@@ -47,7 +51,9 @@ const RocTarget = enum {
             .arm64musl => "arm64musl",
             .arm64glibc => "arm64glibc",
             .arm32musl => "arm32musl",
-            .wasm32 => "wasm32",
+            // this is a web server platform, while in theory we could support WASM via WASI...
+            // let's just disable wasm for now.
+            // .wasm32 => "wasm32",
         };
     }
 
@@ -70,7 +76,9 @@ const all_targets = [_]RocTarget{
     .arm64musl,
     .arm64glibc,
     .arm32musl,
-    .wasm32,
+    // this is a web server platform, while in theory we could support WASM via WASI...
+    // let's just disable wasm for now.
+    // .wasm32,
 };
 
 pub fn build(b: *std.Build) void {

@@ -33,16 +33,16 @@
     // internet connectivity.
     .dependencies = .{
         // TODO: implement our own HTTP server.
-        .zap = .{
-            .url = "git+https://github.com/zigzap/zap?ref=v0.11.0#66c5dc42c781bbb8a9100afda3c7e69ee96eddf3",
-            // The hash is correct, the v0.11.0 github tag, mismatches the build.zig.zon 0.10.6 version.
-            .hash = "zap-0.10.6-GoeB8xCEJABLgoiZjWZMMT5TsoZ5OO2EZe6j24RTUYEH",
-        },
-        // TODO: implement our own file watcher.
-        .fzwatch = .{
-            .url = "https://github.com/freref/fzwatch/archive/eab2fde9ab2a8fd721d4af67e78308fb6b522a16.tar.gz",
-            .hash = "fzwatch-0.2.2-6qM2ONQzAACLaMFX3DGopE-Y6etVZNn8kDh_4LhmWAMp",
-        },
+        // .zap = .{
+        //     .url = "git+https://github.com/zigzap/zap?ref=v0.11.0#66c5dc42c781bbb8a9100afda3c7e69ee96eddf3",
+        //     // The hash is correct, the v0.11.0 github tag, mismatches the build.zig.zon 0.10.6 version.
+        //     .hash = "zap-0.10.6-GoeB8xCEJABLgoiZjWZMMT5TsoZ5OO2EZe6j24RTUYEH",
+        // },
+        // // TODO: implement our own file watcher.
+        // .fzwatch = .{
+        //     .url = "https://github.com/freref/fzwatch/archive/eab2fde9ab2a8fd721d4af67e78308fb6b522a16.tar.gz",
+        //     .hash = "fzwatch-0.2.2-6qM2ONQzAACLaMFX3DGopE-Y6etVZNn8kDh_4LhmWAMp",
+        // },
         // .roc = .{
         //     .url = "git+https://github.com/roc-lang/roc#e6ff7793ad9921098ee8569c8a394f9b0ed5fb75",
         //     .hash = "roc-0.0.0-NAC9w6FtewDruF0JVeJYUTYDDBMU9xmKwv5RCBoCplzn",

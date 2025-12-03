@@ -28,7 +28,7 @@ export PATH="$PWD/zig-out/bin:$PATH"
 
 # run rig
 rig version
-rig init default
+rig init
 rig dev
 
 # delete directory ./my-roc-app/
@@ -45,15 +45,32 @@ rig 0.1.0
 info: Running rig init default my-roc-app
 info: Created Dir: ./my-roc-app
 info: Copied File: ./my-roc-app/build.zig
-info: Copied File: ./my-roc-app/app.roc
+info: Copied File: ./my-roc-app/main.roc
+info: Created Dir: ./my-roc-app/ci
+info: Copied File: ./my-roc-app/ci/all_tests.sh
+info: Copied File: ./my-roc-app/ci/get_roc_commit.py
+info: Copied File: ./my-roc-app/LICENSE
+info: Copied File: ./my-roc-app/bundle.sh
+info: Created Dir: ./my-roc-app/examples
+info: Copied File: ./my-roc-app/examples/stderr.roc
+info: Copied File: ./my-roc-app/examples/hello.roc
+info: Copied File: ./my-roc-app/examples/sum_fold.roc
+info: Copied File: ./my-roc-app/examples/exit.roc
+info: Copied File: ./my-roc-app/examples/fizzbuzz.roc
+info: Copied File: ./my-roc-app/examples/match.roc
+info: Copied File: ./my-roc-app/examples/echo.roc
+info: Copied File: ./my-roc-app/examples/tests.roc
 info: Created Dir: ./my-roc-app/public
 info: Copied File: ./my-roc-app/public/index.html
 info: Copied File: ./my-roc-app/public/main.wasm
 info: Created Dir: ./my-roc-app/platform
 info: Copied File: ./my-roc-app/platform/main.roc
+info: Copied File: ./my-roc-app/platform/watcher.zig
+info: Copied File: ./my-roc-app/platform/dev_server.zig
 info: Copied File: ./my-roc-app/platform/Stdout.roc
 info: Copied File: ./my-roc-app/platform/Stderr.roc
 info: Copied File: ./my-roc-app/platform/host.zig
+info: Copied File: ./my-roc-app/platform/server.zig
 info: Created Dir: ./my-roc-app/platform/targets
 info: Created Dir: ./my-roc-app/platform/targets/x64musl
 info: Copied File: ./my-roc-app/platform/targets/x64musl/libc.a
@@ -63,6 +80,8 @@ info: Copied File: ./my-roc-app/platform/targets/arm64musl/libc.a
 info: Copied File: ./my-roc-app/platform/targets/arm64musl/crt1.o
 info: Copied File: ./my-roc-app/platform/Stdin.roc
 info: Copied File: ./my-roc-app/platform/ZServer.roc
+info: Copied File: ./my-roc-app/platform/rig-server.zig
+info: Copied File: ./my-roc-app/README.md
 info: Copied File: ./my-roc-app/build.zig.zon
 info: Template installed successfully!
 info: Precompiling Rig Roc Web Platform
@@ -74,10 +93,36 @@ info:
 Now run:
   cd my-roc-app
   rig dev
+
 info: Running rig dev
 info: ./my-roc-app: roc main.roc
+debug: [HOST] Hosted functions count: 4
+debug: [HOST] Building args...
+debug: [ALLOC] ptr=0x7ffff7fc0008 size=40 align=8
+debug: [ALLOC] ptr=0x7ffff7fa0008 size=126 align=8
+debug: [HOST] args_list ptr=0x7ffff7fc0018 len=1
+debug: [HOST] Calling roc__main_for_host...
+Hello from Roc App!
+debug: [ALLOC] ptr=0x7ffff7fa0108 size=126 align=8
+debug: [ALLOC] ptr=0x7ffff7fa0208 size=132 align=8
+debug: [DEALLOC] ptr=0x7ffff7fa0208 align=8
 Server Started
-Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...Zzz...
+startDevServer...
+init...
+route...
+getPort...
+spawningThread...
+listenAndServe...
+getPort...
+info: Roc dev server → http://localhost:3010
+while not shutdown...
+listener accept...
+handleConnection...
+listener accept...
+handleConnection...
+listener accept...
+handleConnection...
+listener accept...
 ```
 
 A work in progress...
