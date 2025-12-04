@@ -5,32 +5,26 @@ app [main!] {
 import pf.Stdout
 import pf.ZServer
 
+status : U32, Str -> Str
+status = |s, m| "HTTP/1.1 ${U32.to_str(s)} ${m}\r\n\r\n"
+
+tag : Str, List(Str), Str -> Str
+tag = |t, attrs, children| "<${t} ${Str.join_with(attrs, " ")}>${children}</${t}>"
+
+resp : U32, Str, Str -> Str
+resp = |s, m, b| "${status(s, m)}${b}"
+
 main! : List(Str) => Try({}, [Exit(I32)])
 main! = |args| {
+    _a = args
 
-    Stdout.line!("Hello from Roc App!")
+    Stdout.line!("Hello World!")
 
-    args_str = Str.join_with(args, ", ")
-    Stdout.line!("Args: ${args_str}")
-
-    body = tag("h1", ["id='asdf'", "style='color:red;'"], "Hello from Roc!")
-
-    # TODO: pass a request handler function "Str -> Str" to Server.serve!(handleRequest)
-    ZServer.serve!("HTTP/1.1 200 OK\r\n\r\n${body}")
+    ZServer.serve!(
+        resp(200, "OK",
+            tag("h1", ["style='color: purple;'"], "Hello World!")
+        )
+    )
 
     Ok({})
 }
-
-tag : Str, List(Str), Str -> Str
-tag = |t, _attrs, children| "<${t}>${children}</${t}>"
-
-# TODO: pass a request handler function (Str -> Str) to Server.serve!(handleRequest)
-#handleRequest : Str -> Str
-#handleRequest = |rawRequest|
-#        """
-#        HTTP/1.1 200 OK\r
-#        \r
-#        <h1>Hello from Roc!</h1>
-#        <h2>What you requested</h2>
-#        <p>${rawRequest}</p>
-#        """
