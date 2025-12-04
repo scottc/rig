@@ -164,7 +164,7 @@ fn hostedStderrLine(ops: *builtins.host_abi.RocOps, ret_ptr: *anyopaque, args_pt
     _ = ret_ptr; // Return value is {} which is zero-sized
 
     // Arguments struct for single Str parameter
-    const Args = extern struct { str: RocStr };
+    const Args = extern struct { str: builtins.str.RocStr };
     const args: *Args = @ptrCast(@alignCast(args_ptr));
 
     const message = args.str.asSlice();
@@ -248,15 +248,20 @@ fn hostedStdoutLine(ops: *builtins.host_abi.RocOps, ret_ptr: *anyopaque, args_pt
 fn hostedZServerServe(ops: *builtins.host_abi.RocOps, ret_ptr: *anyopaque, args_ptr: *anyopaque) callconv(.c) void {
     _ = ops;
     _ = ret_ptr;
-    _ = args_ptr;
+
+    // Arguments struct for single Str parameter
+    const Args = extern struct { str: RocStr };
+    const args: *Args = @ptrCast(@alignCast(args_ptr));
+
+    const str = args.str.asSlice();
 
     const stdout: std.fs.File = .stdout();
-    stdout.writeAll("Server Started\n") catch {};
 
-    _ = dev_server.startDevServer(std.heap.page_allocator, 3010) catch {};
+    std.log.info("Setting request handler... '{s}'\n", .{str});
+    dev_server.placeholder_request_handler = str;
 
-    const stderr: std.fs.File = .stderr();
-    stderr.writeAll("Oh No, an error occured, we're not expecting to be here, but yet... here we are...\n") catch {};
+    stdout.writeAll("Starting server...\n") catch {};
+    _ = dev_server.startDevServer(std.heap.page_allocator);
 }
 
 /// Array of hosted function pointers, sorted alphabetically by fully-qualified name
@@ -265,7 +270,7 @@ const hosted_function_ptrs = [_]builtins.host_abi.HostedFn{
     hostedStderrLine, // Stderr.line! (index 0)
     hostedStdinLine, // Stdin.line! (index 1)
     hostedStdoutLine, // Stdout.line! (index 2)
-    hostedZServerServe, // ZServer.serve! (index 3)
+    hostedZServerServe, // ZServer.serve!(Str) (index 3)
 };
 
 /// Platform host entrypoint

@@ -1,3 +1,5 @@
 ZServer := [].{
-    serve! : () => {}
+    # TODO:
+    # serve! : ((Str -> Str)) -> {}
+    serve! : (Str) -> {}
 }
