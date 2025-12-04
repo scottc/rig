@@ -18,6 +18,9 @@ main! = |args| {
             ],
             html([
                 tag("html", [], [
+                    tag("head", [], [
+                        tag("title", [], ["Hello World!"])
+                    ]),
                     tag("body", ["style='background: black;'"], [
                         tag("h1", ["style='color: yellow;'"], ["Hello"]),
                         tag("a", ["href='#'", "style='color: orange;'"], ["World!"])
@@ -38,11 +41,11 @@ resp =
 
 # The http status
 status : U32, Str -> Str
-status = |s, m| "HTTP/1.1 ${U32.to_str(s)} ${m}"
+status = |status_code, status_message| "HTTP/1.1 ${U32.to_str(status_code)} ${status_message}"
 
 # A HTTP header.
 header : Str, Str -> Str
-header = |k, v| "${k}: ${v}"
+header = |key, value| "${key}: ${value}"
 
 # A HTML document
 html : List(Str) -> Str
