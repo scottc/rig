@@ -30,9 +30,10 @@ main! = |args| {
     Stdout.line!("Hello World!")
 
     ZServer.serve!(
-        resp(200, "OK",
+        http_resp(1.1, 200, "OK",
             [
-                header("Cache-Control", "no-store"),
+                http_header("Cache-Control", "no-store"),
+                http_header("Content-Type", "text/html; charset=utf-8"),
             ],
             html([
                 tag("html", [], [
@@ -51,32 +52,27 @@ main! = |args| {
     Ok({})
 }
 
-# A HTTP response of any mime type
-resp : U32, Str, List(Str), Str -> Str
-resp =
-    |status_code, status_message, headers, body|
-    "${status(status_code, status_message)}\r\n${Str.join_with(headers, "\r\n")}\r\n\r\n${body}"
+# A HTTP response
+http_resp : Dec, U32, Str, List(Str), Str -> Str
+http_resp =
+    |http_version, status_code, status_message, headers, body|
+    "HTTP/${Dec.to_str(http_version)} ${U32.to_str(status_code)} ${status_message}\r\n${Str.join_with(headers, "\r\n")}\r\n\r\n${body}"
 
-# The http status
-status : U32, Str -> Str
-status = |status_code, status_message| "HTTP/1.1 ${U32.to_str(status_code)} ${status_message}"
-
-# A HTTP header.
-header : Str, Str -> Str
-header = |key, value| "${key}: ${value}"
-
-# A HTML document
-html : List(Str) -> Str
-html = |tags| "${doctype}\r\n${Str.join_with(tags, "")}"
+# A HTTP header
+http_header : Str, Str -> Str
+http_header = |key, value| "${key}: ${value}"
 
 # The HTML 5 DOCTYPE
 doctype : Str
 doctype = "<!DOCTYPE html>"
 
+# A HTML document
+html : List(Str) -> Str
+html = |tags| "${doctype}\r\n${Str.join_with(tags, "")}"
+
 # An XML tag... for example, HTML or SVG tag.
 tag : Str, List(Str), List(Str) -> Str
 tag = |t, attrs, children| "<${t} ${Str.join_with(attrs, " ")}>${Str.join_with(children, "")}</${t}>"
-
 ```
 
 ## Contributing
