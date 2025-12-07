@@ -20,10 +20,10 @@ main! = |args| {
     Stdout.line!(resp)
 
     readDirResult = File.readDir!(".")
-    #Stdout.line!(readDirResult)
+    Stdout.line!(readDirResult)
 
     writeResult = File.writeFile!("./test.txt", "Wrote a thing")
-    #Stdout.line!(writeResult)
+    Stdout.line!(writeResult)
 
     readFileResult = File.readFile!("./test.txt")
     Stdout.line!(readFileResult)
