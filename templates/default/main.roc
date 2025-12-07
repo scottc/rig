@@ -4,12 +4,15 @@ app [main!] {
 
 import pf.Stdout
 import pf.ZServer
+import pf.ZClient
 
 main! : List(Str) => Try({}, [Exit(I32)])
 main! = |args| {
     _a = args
 
-    Stdout.line!("Hello World!")
+    resp : Str
+    resp = ZClient.fetch!("https://www.roc-lang.org/docs","GET","[headers]","[body]")
+    Stdout.line!(resp)
 
     ZServer.serve!(
         http_resp(1.1, 200, "OK",

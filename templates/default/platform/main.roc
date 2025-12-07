@@ -1,6 +1,6 @@
 platform ""
     requires {} { main! : List(Str) => Try({}, [Exit(I32)]) }
-    exposes [Stdout, Stderr, Stdin, ZServer]
+    exposes [Stdout, Stderr, Stdin, ZServer, ZClient]
     packages {}
     provides { main_for_host! : "main_for_host" }
 

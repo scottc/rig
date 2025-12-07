@@ -1,8 +1,14 @@
 ///! Platform host that tests effectful functions writing to stdout and stderr.
 const std = @import("std");
 const builtins = @import("builtins");
+const layout = @import("layout");
 
 const dev_server = @import("dev_server.zig");
+
+// Use the actual types from builtins
+const RocStr = builtins.str.RocStr;
+const RocList = builtins.list.RocList;
+const RocOps = builtins.host_abi.RocOps;
 
 /// Host environment
 const HostEnv = struct {
@@ -152,10 +158,6 @@ fn main(argc: c_int, argv: [*][*:0]u8) callconv(.c) c_int {
     return platform_main(@intCast(argc), argv);
 }
 
-// Use the actual types from builtins
-const RocStr = builtins.str.RocStr;
-const RocList = builtins.list.RocList;
-
 /// Hosted function: Stderr.line! (index 0 - sorted alphabetically)
 /// Follows RocCall ABI: (ops, ret_ptr, args_ptr)
 /// Returns {} and takes Str as argument
@@ -242,6 +244,63 @@ fn hostedStdoutLine(ops: *builtins.host_abi.RocOps, ret_ptr: *anyopaque, args_pt
     stdout.writeAll("\n") catch {};
 }
 
+fn hostedZClientFetch(ops: *builtins.host_abi.RocOps, ret_ptr: *anyopaque, args_ptr: *anyopaque) callconv(.c) void {
+    // Arguments struct for single Str parameter
+    const Args = extern struct {
+        url: RocStr,
+        method: RocStr,
+        headers: RocStr, // This is actually a RocList(RocRecord({ name: RocStr, value RocStr }))
+        body: RocStr,
+    };
+    const args: *Args = @ptrCast(@alignCast(args_ptr));
+
+    const url = args.url.asSlice();
+    const method = args.method.asSlice();
+    //const headers = args.method.asSlice(); // This is actually a RocList(RocRecord({ name: RocStr, value RocStr }))
+    const body = args.method.asSlice();
+
+    std.log.info("Fetching: {s} {s} <-\n{s}", .{ method, url, body });
+
+    var client: std.http.Client = .{ .allocator = std.heap.page_allocator };
+    defer client.deinit();
+
+    // const uri = std.Uri.parse(url);
+
+    // This seems to only return the status code... we probs want to dig deeper...
+    const fetchResult = client.fetch(.{
+        .location = .{ .url = url },
+        // .method = ,
+        // .payload = ,
+        // .headers = ,
+    }) catch unreachable;
+
+    //if (fetchResult) |fr| {
+    std.log.info("Fetch Response: {s} {s} ->\n{s}", .{ method, url, @tagName(fetchResult.status) });
+    //} else {
+    // std.log.error("Fetch Error: ...", .{ method, url });
+    //}
+
+    const response = "Something happened"; //fetchResult.status;
+
+    // Return the string to roc...
+
+    // Allocate through Roc's allocation system to ensure proper size-tracking metadata
+    var roc_alloc_args = builtins.host_abi.RocAlloc{
+        .alignment = 1,
+        .length = response.len,
+        .answer = undefined,
+    };
+    ops.roc_alloc(&roc_alloc_args, ops.env);
+
+    // Copy line data to the Roc-allocated memory
+    const line_copy: [*]u8 = @ptrCast(roc_alloc_args.answer);
+    @memcpy(line_copy[0..response.len], response);
+
+    // Create RocStr from the read line and return it
+    const result: *RocStr = @ptrCast(@alignCast(ret_ptr));
+    result.* = RocStr.init(line_copy, response.len, ops);
+}
+
 /// Hosted function: ZServer.serve! (index 3 - sorted alphabetically)
 /// Follows RocCall ABI: (ops, ret_ptr, args_ptr)
 /// Returns {} and takes () as argument
@@ -264,13 +323,56 @@ fn hostedZServerServe(ops: *builtins.host_abi.RocOps, ret_ptr: *anyopaque, args_
     _ = dev_server.startDevServer(std.heap.page_allocator);
 }
 
+// const RocClosure = extern struct {
+//     fn_ptr: usize, // raw function pointer
+//     padding: u32, // sometimes present
+//     captures_layout_idx: u32,
+// };
+
+// fn debugStructPrinter(data: anytype) void {
+//     const T = @TypeOf(data);
+//     std.debug.print("type:\n\t{}\n", .{T});
+//     inline for (@typeInfo(T).Struct.fields) |field| {
+//         std.debug.print("\tfield name: {s} value: {any}\n", .{ field.name, @field(data, field.name) });
+//     }
+// }
+
+// fn hostedZServerServe2(ops: *builtins.host_abi.RocOps, ret_ptr: *anyopaque, args_ptr: *anyopaque) callconv(.c) void {
+//     _ = ret_ptr; // not used here, but could write result if needed
+//     //_ = ops;
+
+//     // Arguments struct for single Str parameter
+//     const Args = extern struct { func: layout.Layout };
+//     const args: *Args = @ptrCast(@alignCast(args_ptr));
+
+//     debugStructPrinter(args_ptr);
+//     debugStructPrinter(args);
+//     debugStructPrinter(&(args).func);
+//     debugStructPrinter(ops);
+
+//     //var input: RocStr = RocStr.init("hello", "hello".len, ops);
+
+//     // call the closure...
+
+//     // Storage for the result
+//     var output: RocStr = undefined;
+//     const output2 = output.asSlice();
+//     std.log.info("Output: {s}", .{output2});
+
+//     // Cleanup
+//     // input.decref();
+//     // output.decref();
+// }
+
 /// Array of hosted function pointers, sorted alphabetically by fully-qualified name
 /// These correspond to the hosted functions defined in Stderr, Stdin, and Stdout Type Modules
 const hosted_function_ptrs = [_]builtins.host_abi.HostedFn{
     hostedStderrLine, // Stderr.line! (index 0)
     hostedStdinLine, // Stdin.line! (index 1)
     hostedStdoutLine, // Stdout.line! (index 2)
+    hostedZClientFetch, // ZServer.serve!(Str) (index 3)
     hostedZServerServe, // ZServer.serve!(Str) (index 3)
+    //hostedZServerServe2, // ZServer.serve!(Str) (index 4)
 };
 
 /// Platform host entrypoint

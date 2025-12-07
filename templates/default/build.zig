@@ -4,19 +4,19 @@ const builtin = @import("builtin");
 /// Roc target definitions matching src/cli/target.zig
 const RocTarget = enum {
     // x64 (x86_64) targets
-    x64mac,
-    x64win,
+    //x64mac,
+    //x64win,
     x64musl,
-    x64glibc,
+    //x64glibc,
 
     // arm64 (aarch64) targets
-    arm64mac,
-    arm64win,
-    arm64musl,
-    arm64glibc,
+    //arm64mac,
+    //arm64win,
+    //arm64musl,
+    //arm64glibc,
 
     // arm32 targets
-    arm32musl,
+    //arm32musl,
 
     // this is a web server platform, while in theory we could support WASM via WASI...
     // let's just disable wasm for now.
@@ -25,15 +25,16 @@ const RocTarget = enum {
 
     fn toZigTarget(self: RocTarget) std.Target.Query {
         return switch (self) {
-            .x64mac => .{ .cpu_arch = .x86_64, .os_tag = .macos },
-            .x64win => .{ .cpu_arch = .x86_64, .os_tag = .windows, .abi = .gnu },
+            //.x64mac => .{ .cpu_arch = .x86_64, .os_tag = .macos },
+            //.x64win => .{ .cpu_arch = .x86_64, .os_tag = .windows, .abi = .gnu },
             .x64musl => .{ .cpu_arch = .x86_64, .os_tag = .linux, .abi = .musl },
-            .x64glibc => .{ .cpu_arch = .x86_64, .os_tag = .linux, .abi = .gnu },
-            .arm64mac => .{ .cpu_arch = .aarch64, .os_tag = .macos },
-            .arm64win => .{ .cpu_arch = .aarch64, .os_tag = .windows, .abi = .gnu },
-            .arm64musl => .{ .cpu_arch = .aarch64, .os_tag = .linux, .abi = .musl },
-            .arm64glibc => .{ .cpu_arch = .aarch64, .os_tag = .linux, .abi = .gnu },
-            .arm32musl => .{ .cpu_arch = .arm, .os_tag = .linux, .abi = .musleabihf },
+            //.x64glibc => .{ .cpu_arch = .x86_64, .os_tag = .linux, .abi = .gnu },
+            //.arm64mac => .{ .cpu_arch = .aarch64, .os_tag = .macos },
+            //.arm64win => .{ .cpu_arch = .aarch64, .os_tag = .windows, .abi = .gnu },
+            //.arm64musl => .{ .cpu_arch = .aarch64, .os_tag = .linux, .abi = .musl },
+            //.arm64glibc => .{ .cpu_arch = .aarch64, .os_tag = .linux, .abi = .gnu },
+            //.arm32musl => .{ .cpu_arch = .arm, .os_tag = .linux, .abi = .musleabihf },
+
             // this is a web server platform, while in theory we could support WASM via WASI...
             // let's just disable wasm for now.
             // .wasm32 => .{ .cpu_arch = .wasm32, .os_tag = .wasi },
@@ -42,15 +43,16 @@ const RocTarget = enum {
 
     fn targetDir(self: RocTarget) []const u8 {
         return switch (self) {
-            .x64mac => "x64mac",
-            .x64win => "x64win",
+            //.x64mac => "x64mac",
+            //.x64win => "x64win",
             .x64musl => "x64musl",
-            .x64glibc => "x64glibc",
-            .arm64mac => "arm64mac",
-            .arm64win => "arm64win",
-            .arm64musl => "arm64musl",
-            .arm64glibc => "arm64glibc",
-            .arm32musl => "arm32musl",
+            //.x64glibc => "x64glibc",
+            //.arm64mac => "arm64mac",
+            //.arm64win => "arm64win",
+            //.arm64musl => "arm64musl",
+            //.arm64glibc => "arm64glibc",
+            //.arm32musl => "arm32musl",
+            //
             // this is a web server platform, while in theory we could support WASM via WASI...
             // let's just disable wasm for now.
             // .wasm32 => "wasm32",
@@ -58,24 +60,27 @@ const RocTarget = enum {
     }
 
     fn libFilename(self: RocTarget) []const u8 {
-        return switch (self) {
-            .x64win, .arm64win => "host.lib",
-            else => "libhost.a",
-        };
+        // return switch (self) {
+        //     .x64win, .arm64win => "host.lib",
+        //     else => "libhost.a",
+        // };
+        _ = self;
+        return "libhost.a";
     }
 };
 
 /// All cross-compilation targets for `zig build`
 const all_targets = [_]RocTarget{
-    .x64mac,
-    .x64win,
+    //.x64mac,
+    //.x64win,
     .x64musl,
-    .x64glibc,
-    .arm64mac,
-    .arm64win,
-    .arm64musl,
-    .arm64glibc,
-    .arm32musl,
+    //.x64glibc,
+    //.arm64mac,
+    //.arm64win,
+    //.arm64musl,
+    //.arm64glibc,
+    //.arm32musl,
+    //
     // this is a web server platform, while in theory we could support WASM via WASI...
     // let's just disable wasm for now.
     // .wasm32,
@@ -87,6 +92,7 @@ pub fn build(b: *std.Build) void {
     // Get the roc dependency and its builtins module
     const roc_dep = b.dependency("roc", .{});
     const builtins_module = roc_dep.module("builtins");
+    const layout_module = roc_dep.module("layout");
 
     // Cleanup step: remove only generated host library files (preserve libc.a, crt1.o, etc.)
     const cleanup_step = b.step("clean", "Remove all built library files");
@@ -109,7 +115,7 @@ pub fn build(b: *std.Build) void {
     // Build for each Roc target
     for (all_targets) |roc_target| {
         const target = b.resolveTargetQuery(roc_target.toZigTarget());
-        const host_lib = buildHostLib(b, target, optimize, builtins_module);
+        const host_lib = buildHostLib(b, target, optimize, builtins_module, layout_module);
 
         // Copy to platform/targets/{target}/libhost.a (or host.lib for Windows)
         copy_all.addCopyFileToSource(
@@ -123,7 +129,7 @@ pub fn build(b: *std.Build) void {
     native_step.dependOn(cleanup_step);
 
     const native_target = b.standardTargetOptions(.{});
-    const native_lib = buildHostLib(b, native_target, optimize, builtins_module);
+    const native_lib = buildHostLib(b, native_target, optimize, builtins_module, layout_module);
     b.installArtifact(native_lib);
 
     // Copy native library to platform/libhost.a (or host.lib)
@@ -172,6 +178,7 @@ fn buildHostLib(
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
     builtins_module: *std.Build.Module,
+    layout_module: *std.Build.Module,
 ) *std.Build.Step.Compile {
     const host_lib = b.addLibrary(.{
         .name = "host",
@@ -184,6 +191,7 @@ fn buildHostLib(
             .pic = true,
             .imports = &.{
                 .{ .name = "builtins", .module = builtins_module },
+                .{ .name = "layout", .module = layout_module },
             },
         }),
     });
