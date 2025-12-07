@@ -4,11 +4,15 @@
 
 An opinionated elm architecture, next.js, vite, bun like... all in 1 tool, but for [roc](https://www.roc-lang.org/) & [zig](https://ziglang.org/).
 
-We have three main components...
+We have five main components...
 
 - The cli tool
-- The web server side platform
-- The web client side platform
+- The web server side platform template
+- The web server side roc app template
+- The web client side platform template
+- The web client side roc app template
+
+Templates, because we expect you to customise, and take ownership of all the different components, once you build out your app... but also feel free to delete them and link against the online distributed pre-built standard templates.
 
 It's called Rig, because **R**oc & Z**ig**... an uninspired name.
 
@@ -97,12 +101,26 @@ tag = |t, attrs, children| "<${t} ${Str.join_with(attrs, " ")}>${Str.join_with(c
 
 - [x] Open Source, undecided on license.
 - [x] Written in Zig
-- [x] It has a Server.serve!() roc platform function.
-- [ ] It serves files over http...
-- [ ] It implements web sockets...
-- [ ] It sends file modified websocket event, for client side hot module replacement...
-- [ ] It ...
-- [x] Linux
+
+### Console
+
+- [x] It implements `stdout` & `stderr` via `std.fs.File`
+
+### Network
+
+- [ ] It implements Server.serve!(Str->Str)... via `std.net.Server` (partially working...)
+- [x] It implements http fetch client... via `std.http.Client`
+- [ ] It implements web sockets... via `std.http.Server`
+
+### File System
+
+- [x] It implements file readFile... via `std.fs.File`
+- [x] It implements file writeFile... via `std.fs.File`
+- [x] It implements readDir... via `std.fs.File`
+
+### OS Support
+
+- [x] Linux `x64musl`
 - [ ] Mac (not tested...)
 - [ ] Windows (not tested...)
 

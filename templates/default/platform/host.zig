@@ -175,58 +175,6 @@ fn hostedStderrLine(ops: *builtins.host_abi.RocOps, ret_ptr: *anyopaque, args_pt
     stderr.writeAll("\n") catch {};
 }
 
-/// Hosted function: Stdin.line! (index 1 - sorted alphabetically)
-/// Follows RocCall ABI: (ops, ret_ptr, args_ptr)
-/// Returns Str and takes {} as argument
-fn hostedStdinLine(ops: *builtins.host_abi.RocOps, ret_ptr: *anyopaque, args_ptr: *anyopaque) callconv(.c) void {
-    _ = args_ptr; // Argument is {} which is zero-sized
-
-    // Read a line from stdin
-    var buffer: [4096]u8 = undefined;
-    const stdin_file: std.fs.File = .stdin();
-    const bytes_read = stdin_file.read(&buffer) catch {
-        // Return empty string on error
-        const result: *RocStr = @ptrCast(@alignCast(ret_ptr));
-        result.* = RocStr.empty();
-        return;
-    };
-
-    // Handle EOF (no bytes read)
-    if (bytes_read == 0) {
-        const result: *RocStr = @ptrCast(@alignCast(ret_ptr));
-        result.* = RocStr.empty();
-        return;
-    }
-
-    // Find newline and trim it (handle both \n and \r\n)
-    const line_with_newline = buffer[0..bytes_read];
-    var line = if (std.mem.indexOfScalar(u8, line_with_newline, '\n')) |newline_idx|
-        line_with_newline[0..newline_idx]
-    else
-        line_with_newline;
-
-    // Also trim trailing \r for Windows line endings
-    if (line.len > 0 and line[line.len - 1] == '\r') {
-        line = line[0 .. line.len - 1];
-    }
-
-    // Allocate through Roc's allocation system to ensure proper size-tracking metadata
-    var roc_alloc_args = builtins.host_abi.RocAlloc{
-        .alignment = 1,
-        .length = line.len,
-        .answer = undefined,
-    };
-    ops.roc_alloc(&roc_alloc_args, ops.env);
-
-    // Copy line data to the Roc-allocated memory
-    const line_copy: [*]u8 = @ptrCast(roc_alloc_args.answer);
-    @memcpy(line_copy[0..line.len], line);
-
-    // Create RocStr from the read line and return it
-    const result: *RocStr = @ptrCast(@alignCast(ret_ptr));
-    result.* = RocStr.init(line_copy, line.len, ops);
-}
-
 /// Hosted function: Stdout.line! (index 2 - sorted alphabetically)
 /// Follows RocCall ABI: (ops, ret_ptr, args_ptr)
 /// Returns {} and takes Str as argument
@@ -244,7 +192,7 @@ fn hostedStdoutLine(ops: *builtins.host_abi.RocOps, ret_ptr: *anyopaque, args_pt
     stdout.writeAll("\n") catch {};
 }
 
-fn hostedZClientFetch(ops: *builtins.host_abi.RocOps, ret_ptr: *anyopaque, args_ptr: *anyopaque) callconv(.c) void {
+fn hostedClientFetch(ops: *builtins.host_abi.RocOps, ret_ptr: *anyopaque, args_ptr: *anyopaque) callconv(.c) void {
     // Arguments struct for single Str parameter
     const Args = extern struct {
         url: RocStr,
@@ -304,7 +252,7 @@ fn hostedZClientFetch(ops: *builtins.host_abi.RocOps, ret_ptr: *anyopaque, args_
 /// Hosted function: ZServer.serve! (index 3 - sorted alphabetically)
 /// Follows RocCall ABI: (ops, ret_ptr, args_ptr)
 /// Returns {} and takes () as argument
-fn hostedZServerServe(ops: *builtins.host_abi.RocOps, ret_ptr: *anyopaque, args_ptr: *anyopaque) callconv(.c) void {
+fn hostedServerServe(ops: *builtins.host_abi.RocOps, ret_ptr: *anyopaque, args_ptr: *anyopaque) callconv(.c) void {
     _ = ops;
     _ = ret_ptr;
 
@@ -323,56 +271,153 @@ fn hostedZServerServe(ops: *builtins.host_abi.RocOps, ret_ptr: *anyopaque, args_
     _ = dev_server.startDevServer(std.heap.page_allocator);
 }
 
-// const RocClosure = extern struct {
-//     fn_ptr: usize, // raw function pointer
-//     padding: u32, // sometimes present
-//     captures_layout_idx: u32,
-// };
+fn hostedFileDirRead(ops: *builtins.host_abi.RocOps, ret_ptr: *anyopaque, args_ptr: *anyopaque) callconv(.c) void {
+    const Args = extern struct { str: RocStr };
+    const args: *Args = @ptrCast(@alignCast(args_ptr));
+    const path = args.str.asSlice();
 
-// fn debugStructPrinter(data: anytype) void {
-//     const T = @TypeOf(data);
-//     std.debug.print("type:\n\t{}\n", .{T});
-//     inline for (@typeInfo(T).Struct.fields) |field| {
-//         std.debug.print("\tfield name: {s} value: {any}\n", .{ field.name, @field(data, field.name) });
-//     }
-// }
+    const stdout: std.fs.File = .stdout();
+    stdout.writeAll("Reading Dir: ") catch {};
+    stdout.writeAll(path) catch {};
 
-// fn hostedZServerServe2(ops: *builtins.host_abi.RocOps, ret_ptr: *anyopaque, args_ptr: *anyopaque) callconv(.c) void {
-//     _ = ret_ptr; // not used here, but could write result if needed
-//     //_ = ops;
+    var buffer: [1024]u8 = undefined; // Temp for collecting dir contents
+    var buf_len: usize = 0;
 
-//     // Arguments struct for single Str parameter
-//     const Args = extern struct { func: layout.Layout };
-//     const args: *Args = @ptrCast(@alignCast(args_ptr));
+    var dir = std.fs.cwd().openDir(path, .{ .iterate = true }) catch return;
+    defer dir.close();
 
-//     debugStructPrinter(args_ptr);
-//     debugStructPrinter(args);
-//     debugStructPrinter(&(args).func);
-//     debugStructPrinter(ops);
+    const allocator = std.heap.page_allocator;
 
-//     //var input: RocStr = RocStr.init("hello", "hello".len, ops);
+    var walker = dir.walk(allocator) catch return;
+    defer walker.deinit();
 
-//     // call the closure...
+    while (walker.next() catch return) |entry| {
+        if (std.mem.eql(u8, entry.path, ".")) continue;
 
-//     // Storage for the result
-//     var output: RocStr = undefined;
-//     const output2 = output.asSlice();
-//     std.log.info("Output: {s}", .{output2});
+        switch (entry.kind) {
+            .file => {
+                const name = entry.path;
+                if (buf_len + name.len < buffer.len) {
+                    @memcpy(buffer[buf_len..][0..name.len], name);
+                    buf_len += name.len;
+                }
+            },
+            .directory => {
+                const name = entry.path;
+                if (buf_len + name.len < buffer.len) {
+                    @memcpy(buffer[buf_len..][0..name.len], name);
+                    buf_len += name.len;
+                }
+            },
+            else => {},
+        }
+    }
 
-//     // Cleanup
-//     // input.decref();
-//     // output.decref();
-// }
+    const response = buffer[0..buf_len];
+
+    // Allocate through Roc's allocation system to ensure proper size-tracking metadata
+    var roc_alloc_args = builtins.host_abi.RocAlloc{
+        .alignment = 1,
+        .length = response.len,
+        .answer = undefined,
+    };
+    ops.roc_alloc(&roc_alloc_args, ops.env);
+
+    // Copy line data to the Roc-allocated memory
+    const line_copy: [*]u8 = @ptrCast(roc_alloc_args.answer);
+    @memcpy(line_copy[0..response.len], response);
+
+    // Create RocStr from the read line and return it
+    const result: *RocStr = @ptrCast(@alignCast(ret_ptr));
+    result.* = RocStr.init(line_copy, response.len, ops);
+}
+
+fn hostedFileFileRead(ops: *builtins.host_abi.RocOps, ret_ptr: *anyopaque, args_ptr: *anyopaque) callconv(.c) void {
+    const Args = extern struct { str: RocStr };
+    const args: *Args = @ptrCast(@alignCast(args_ptr));
+    const filepath = args.str.asSlice();
+
+    const stdout: std.fs.File = .stdout();
+    stdout.writeAll("Reading file: ") catch {};
+    stdout.writeAll(filepath) catch {};
+
+    const allocator = std.heap.page_allocator;
+
+    const content = std.fs.cwd().readFileAlloc(
+        allocator,
+        filepath,
+        100 * 1024 * 1024, // 100 MiB max_bytes
+    ) catch unreachable;
+    defer allocator.free(content);
+
+    stdout.writeAll("Read file: ") catch {};
+    stdout.writeAll(content) catch {};
+
+    // Allocate through Roc's allocation system to ensure proper size-tracking metadata
+    var roc_alloc_args = builtins.host_abi.RocAlloc{
+        .alignment = 1,
+        .length = content.len,
+        .answer = undefined,
+    };
+    ops.roc_alloc(&roc_alloc_args, ops.env);
+
+    // Copy line data to the Roc-allocated memory
+    const line_copy: [*]u8 = @ptrCast(roc_alloc_args.answer);
+    @memcpy(line_copy[0..content.len], content);
+
+    // Create RocStr from the read line and return it
+    const result: *RocStr = @ptrCast(@alignCast(ret_ptr));
+    result.* = RocStr.init(line_copy, content.len, ops);
+}
+
+fn hostedFileFileWrite(ops: *builtins.host_abi.RocOps, ret_ptr: *anyopaque, args_ptr: *anyopaque) callconv(.c) void {
+    const Args = extern struct { str1: RocStr, str2: RocStr };
+    const args: *Args = @ptrCast(@alignCast(args_ptr));
+    const filepath = args.str1.asSlice();
+    const filecontent = args.str2.asSlice();
+
+    const stdout: std.fs.File = .stdout();
+    stdout.writeAll("Writing file: ") catch {};
+    stdout.writeAll(filepath) catch {};
+
+    std.fs.cwd().writeFile(.{
+        .sub_path = filepath,
+        .data = filecontent,
+    }) catch unreachable;
+
+    // We may need to make directories first, if they don't exist... perhaps a seperate platform api call for this... keep things explict?
+    // try std.fs.cwd().makePath(std.fs.path.dirname(file_path) orelse ".");
+
+    stdout.writeAll("Wrote file: ") catch {};
+    stdout.writeAll("...") catch {};
+
+    // Allocate through Roc's allocation system to ensure proper size-tracking metadata
+    var roc_alloc_args = builtins.host_abi.RocAlloc{
+        .alignment = 1,
+        .length = filepath.len,
+        .answer = undefined,
+    };
+    ops.roc_alloc(&roc_alloc_args, ops.env);
+
+    // Copy line data to the Roc-allocated memory
+    const line_copy: [*]u8 = @ptrCast(roc_alloc_args.answer);
+    @memcpy(line_copy[0..filepath.len], filepath);
+
+    // Create RocStr from the read line and return it
+    const result: *RocStr = @ptrCast(@alignCast(ret_ptr));
+    result.* = RocStr.init(line_copy, filepath.len, ops);
+}
 
 /// Array of hosted function pointers, sorted alphabetically by fully-qualified name
-/// These correspond to the hosted functions defined in Stderr, Stdin, and Stdout Type Modules
+/// These correspond to the hosted functions defined in Stderr, and Stdout Type Modules
 const hosted_function_ptrs = [_]builtins.host_abi.HostedFn{
-    hostedStderrLine, // Stderr.line! (index 0)
-    hostedStdinLine, // Stdin.line! (index 1)
-    hostedStdoutLine, // Stdout.line! (index 2)
-    hostedZClientFetch, // ZServer.serve!(Str) (index 3)
-    hostedZServerServe, // ZServer.serve!(Str) (index 3)
-    //hostedZServerServe2, // ZServer.serve!(Str) (index 4)
+    hostedClientFetch,
+    hostedFileDirRead,
+    hostedFileFileRead,
+    hostedFileFileWrite,
+    hostedServerServe,
+    hostedStderrLine,
+    hostedStdoutLine,
 };
 
 /// Platform host entrypoint

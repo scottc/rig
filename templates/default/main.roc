@@ -2,19 +2,33 @@ app [main!] {
     pf: platform "./platform/main.roc"
 }
 
+import pf.Stderr
 import pf.Stdout
-import pf.ZServer
-import pf.ZClient
+import pf.Server
+import pf.Client
+import pf.File
 
 main! : List(Str) => Try({}, [Exit(I32)])
 main! = |args| {
     _a = args
 
+    Stderr.line!("Stderr!")
+    Stdout.line!("Stdout!")
+
     resp : Str
-    resp = ZClient.fetch!("https://www.roc-lang.org/docs","GET","[headers]","[body]")
+    resp = Client.fetch!("https://www.roc-lang.org/docs","GET","[headers]","[body]")
     Stdout.line!(resp)
 
-    ZServer.serve!(
+    readDirResult = File.readDir!(".")
+    #Stdout.line!(readDirResult)
+
+    writeResult = File.writeFile!("./test.txt", "Wrote a thing")
+    #Stdout.line!(writeResult)
+
+    readFileResult = File.readFile!("./test.txt")
+    Stdout.line!(readFileResult)
+
+    Server.serve!(
         http_resp(1.1, 200, "OK",
             [
                 http_header("Cache-Control", "no-store"),

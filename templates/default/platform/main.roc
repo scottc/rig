@@ -1,13 +1,22 @@
 platform ""
     requires {} { main! : List(Str) => Try({}, [Exit(I32)]) }
-    exposes [Stdout, Stderr, Stdin, ZServer, ZClient]
+    exposes [
+        Client,
+        File,
+        Server,
+        Stderr,
+        #Stdin,
+        Stdout,
+    ]
     packages {}
     provides { main_for_host! : "main_for_host" }
 
-import Stdout
+import Client
+import File
+import Server
 import Stderr
-import Stdin
-import ZServer
+# import Stdin
+import Stdout
 
 main_for_host! : List(Str) => I32
 main_for_host! = |args| {
