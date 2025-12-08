@@ -16,10 +16,6 @@ pub fn cmdDev(allocator: std.mem.Allocator) !void {
         // Spawn platform child
         var child = std.process.Child.init(&.{ "roc", "--no-cache", "main.roc" }, allocator);
         child.cwd = "./my-roc-app";
-        // catch |err| {
-        //     std.log.err("Failed to spawn roc to compile and run the app...", .{err});
-        //    return;
-        //};
         child.stdin_behavior = .Inherit;
         child.stdout_behavior = .Inherit;
         child.stderr_behavior = .Inherit;
