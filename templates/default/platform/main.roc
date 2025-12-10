@@ -10,6 +10,17 @@ platform ""
     ]
     packages {}
     provides { main_for_host! : "main_for_host" }
+    targets: {
+        files: "targets/",
+        exe: {
+            x64musl: ["crt1.o", "libhost.a", app, "libc.a"],
+            #x64mac: ["libhost.a", app],
+            #arm64mac: ["libhost.a", app],
+            #arm64musl: ["crt1.o", "libhost.a", app, "libc.a"],
+            #x64win: ["host.lib", app],
+            #arm64win: ["host.lib", app],
+        }
+    }
 
 import Client
 import File
